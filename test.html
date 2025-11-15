@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClockMate API Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        .info { border-left: 4px solid #17a2b8; }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status.online { background: #d4edda; color: #155724; }
+        .status.offline { background: #f8d7da; color: #721c24; }
+        input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕐 ClockMate API Tester</h1>
+        <p class="subtitle">Test your PHP backend endpoints</p>
+
+        <!-- Connection Test -->
+        <div class="test-section">
+            <h2>📡 Connection Test <span id="status" class="status offline">Offline</span></h2>
+            <button onclick="testConnection()">Test Connection</button>
+            <div id="connection-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Auth Tests -->
+        <div class="test-section">
+            <h2>🔐 Authentication Tests</h2>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="loginPin" placeholder="PIN (6 digits)" maxlength="6">
+                <button onclick="testLogin()">Test Login</button>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="signupName" placeholder="Name">
+                <input type="email" id="signupEmail" placeholder="Email">
+                <input type="text" id="signupPin" placeholder="PIN" maxlength="6">
+                <button onclick="testSignup()">Test Signup</button>
+            </div>
+            <div id="auth-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Admin Tests -->
+        <div class="test-section">
+            <h2>👨‍💼 Admin Endpoints</h2>
+            <button onclick="testAdminEmployees()">Get All Employees</button>
+            <button onclick="testAdminPending()">Get Pending Approvals</button>
+            <button onclick="testAdminStats()">Get Statistics</button>
+            <div id="admin-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Clock Tests -->
+        <div class="test-section">
+            <h2>⏰ Clock Events</h2>
+            <input type="number" id="employeeId" placeholder="Employee ID" min="1">
+            <button onclick="testClockIn()">Clock In</button>
+            <button onclick="testClockOut()">Clock Out</button>
+            <button onclick="testGetLogs()">Get Logs</button>
+            <div id="clock-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Export Test -->
+        <div class="test-section">
+            <h2>📊 Export Test</h2>
+            <button onclick="testExport()">Export All Data</button>
+            <div id="export-result" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost/clockmate/api';
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result ' + (isError ? 'error' : 'success');
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testConnection() {
+            try {
+                const response = await fetch(`${API_URL}/test`);
+                const data = await response.json();
+                showResult('connection-result', data);
+                document.getElementById('status').className = 'status online';
+                document.getElementById('status').textContent = 'Online';
+            } catch (error) {
+                showResult('connection-result', { error: error.message }, true);
+                document.getElementById('status').className = 'status offline';
+                document.getElementById('status').textContent = 'Offline';
+            }
+        }
+
+        async function testLogin() {
+            const pin = document.getElementById('loginPin').value;
+            if (!pin || pin.length !== 6) {
+                alert('Please enter a 6-digit PIN');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin }),
+                });
+                const data = await response.json();
+                showResult('auth-result', data, !response.ok);
+            } catch (error) {
+                showResult('auth-result', { error: error.message }, true);
+            }
+        }
+
+        async function testSignup() {
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const pin = document.getElementById('signupPin').value;
+
+            if (!name || !email || !pin) {
+                alert('Please fill all fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, pin })
+                });
+                const data = await response.json();
+                showResult('auth-result', data, !response.ok);
+            } catch (error) {
+                showResult('auth-result', { error: error.message }, true);
+            }
+        }
+
+        async function testAdminEmployees() {
+            try {
+                const response = await fetch(`${API_URL}/admin/employees`);
+                const data = await response.json();
+                showResult('admin-result', data, !response.ok);
+            } catch (error) {
+                showResult('admin-result', { error: error.message }, true);
+            }
+        }
+
+        async function testAdminPending() {
+            try {
+                const response = await fetch(`${API_URL}/admin/pending`);
+                const data = await response.json();
+                showResult('admin-result', data, !response.ok);
+            } catch (error) {
+                showResult('admin-result', { error: error.message }, true);
+            }
+        }
+
+        async function testAdminStats() {
+            try {
+                const response = await fetch(`${API_URL}/admin/stats`);
+                const data = await response.json();
+                showResult('admin-result', data, !response.ok);
+            } catch (error) {
+                showResult('admin-result', { error: error.message }, true);
+            }
+        }
+
+        async function testClockIn() {
+            const employeeId = document.getElementById('employeeId').value;
+            if (!employeeId) {
+                alert('Please enter employee ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/clock/event`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        employeeId: parseInt(employeeId), 
+                        type: 'in',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                const data = await response.json();
+                showResult('clock-result', data, !response.ok);
+            } catch (error) {
+                showResult('clock-result', { error: error.message }, true);
+            }
+        }
+
+        async function testClockOut() {
+            const employeeId = document.getElementById('employeeId').value;
+            if (!employeeId) {
+                alert('Please enter employee ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/clock/event`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        employeeId: parseInt(employeeId), 
+                        type: 'out',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                const data = await response.json();
+                showResult('clock-result', data, !response.ok);
+            } catch (error) {
+                showResult('clock-result', { error: error.message }, true);
+            }
+        }
+
+        async function testGetLogs() {
+            const employeeId = document.getElementById('employeeId').value;
+            if (!employeeId) {
+                alert('Please enter employee ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/clock/logs/${employeeId}`);
+                const data = await response.json();
+                showResult('clock-result', data, !response.ok);
+            } catch (error) {
+                showResult('clock-result', { error: error.message }, true);
+            }
+        }
+
+        async function testExport() {
+            try {
+                const response = await fetch(`${API_URL}/admin/export`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'test-export.csv';
+                    a.click();
+                    showResult('export-result', { message: 'Export downloaded successfully!' });
+                } else {
+                    const data = await response.json();
+                    showResult('export-result', data, true);
+                }
+            } catch (error) {
+                showResult('export-result', { error: error.message }, true);
+            }
+        }
+
+        // Test connection on load
+        window.onload = () => {
+            testConnection();
+        };
+    </script>
+</body>
+</html>
